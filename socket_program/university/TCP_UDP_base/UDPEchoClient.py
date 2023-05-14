@@ -5,13 +5,15 @@
 
 import socket
 
-#server_host = '203.250.133.86'
-server_host = '127.0.0.1'
-server_port = 50905
+server_host = '203.250.133.86'
+#server_host = '127.0.0.1'
+server_port = 50705
 #server_port = 69
 BUFF_SIZE = 1024
+TIME_OUT = 5
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.settimeout(TIME_OUT)
 
 server_address = (server_host, server_port)
 
@@ -22,7 +24,10 @@ try:
             break
         message = bytes(message, encoding='utf-8')
         #message = bytearray(message)
-        bytes_sent = sock.sendto(message, server_address)
+        try:
+            bytes_sent = sock.sendto(message, server_address)
+        except Exception as e:
+            print(f"{e}")
         data, address = sock.recvfrom(BUFF_SIZE)
         print(f"서버[{address}]로부터: {data.decode()}")
 

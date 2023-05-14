@@ -6,7 +6,7 @@
 import socket
 
 host = ''
-port = 50905
+port = 50705
 BUFF_SIZE = 1024
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
