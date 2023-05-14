@@ -1,0 +1,3 @@
+Opens a file for reading only in binary
+The file pointer is placed.
+This is the default mode.
