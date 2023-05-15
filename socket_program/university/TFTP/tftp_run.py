@@ -25,7 +25,7 @@ WRQ_OPCODE = 0x0002  # WRQ(write)
 ACK_OPCODE = 0x0004  # ACK
 MODE = 'netascii'  # netascii(=text)
 TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
-TIME_OUT = 5
+TIME_OUT = 10
 WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
 
 COMMAND_LIST = ['GET', 'PUT']  # 명령어 리스트
@@ -121,9 +121,9 @@ def make_ack_message(data_block_number):
 def get_file(tftp_obj, address, opcode, file_name):
     send_msg = make_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
     #print(f"{address} => {send_msg}")
-    tftp_obj.sendto(send_msg, address)  # RRQ 송신
     file = open(file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
     last_block_number = 0  # 블럭 번호 저장
+    tftp_obj.sendto(send_msg, address)  # RRQ 송신
     print(WS)
     while True:
         data, recv_address = tftp_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
@@ -155,11 +155,11 @@ def get_file(tftp_obj, address, opcode, file_name):
 
 def put_file(tftp_obj, address, opcode, file_name):
     send_msg = make_message(opcode, file_name, MODE)  # WRQ 바이트열 생성
-    tftp_obj.sendto(send_msg, address)  # WRQ 송신
     file = open(file_name, 'r', encoding='utf-8') # 파일 읽기로 open
     file_data_list = file.read()
     last_block_number = 0  # 블럭 번호 저장
     last_block_max_state = False
+    tftp_obj.sendto(send_msg, address)  # WRQ 송신
     print(WS)
     while True:
         data, recv_address = tftp_obj.recvfrom(BUFF_SIZE)
