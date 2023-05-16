@@ -131,7 +131,7 @@ if __name__ == "__main__":
     #server_host = '203.250.133.88'  # 주기호 교수님
     server_host = '127.0.0.1'
     server_port = 69
-    file_name = "tmpData_1024BYTE.txt"
+    file_name = "../tmpData_1024BYTE.txt"
 
     keyboard_input_state = -1
     while True:

@@ -44,5 +44,5 @@ while True:
     print("연결 대기중")
     data_sock, client_address = conn_sock.accept()
     serviceThread = EchoThread(data_sock, client_address)
-    serviceThread.setDaemon(True)
+    serviceThread.set_daemon(True)
     serviceThread.start()
