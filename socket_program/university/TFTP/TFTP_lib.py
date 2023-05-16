@@ -144,9 +144,66 @@ def make_error_message(error_number, error_message):  # make ERROR message
     return struct.pack(pack_str, MESSAGE_OP_CODE['ERROR'], error_number, error_message.encode(), TFTP_MESSAGE_SPACE)
 
 
+def send_rq(socket_obj, address, opcode, file_name):  # RRQ/WRQ send
+    send_msg = make_rq_message(opcode, file_name, MODE)  # RQ 바이트열 생성
+    socket_obj.sendto(send_msg, address)  # RQ 송신
+    timeout_counter = 0
+    while True:
+        try:
+            data, recv_address = socket_obj.recvfrom(BUFF_SIZE)
+        except TimeoutError:
+            socket_obj.sendto(send_msg, address)  # WRQ 송신
+            timeout_counter += 1
+            if timeout_counter > SOCKET_TIME_OUT_MAX:
+                raise
+            continue
+        return data, recv_address
+
+
+def put_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 리스트에 저장
+    put_data_list = []
+    while True:
+        data_piece = put_data[:512]
+        put_data = put_data[512:]
+        put_data_list.append(data_piece)
+        if len(put_data) == 0:
+            if len(data_piece) == 512:
+                put_data_list.append("")
+            break
+    return put_data_list
+
+
+def put_data_loop(socket_obj, recv_data, recv_address):
+    data_split_list = data_check(recv_data)
+    last_block_number = data_split_list['number']
+    timeout_counter = 0
+    while True:
+        if data_split_list['']
+
+
+
+def send_data(socket_obj, recv_data, address):
+    timeout_counter = 0
+    print(WS)
+    if (len(file_data_list) <= 0) and (not last_block_max_state):
+        break
+    last_block_number += 1
+    data_piece = file_data_list[:512]
+    file_data_list = file_data_list[512:]
+    if not last_block_max_state:
+        send_dgram_msg = make_data_message('DATA', last_block_number, data_piece)  # 데이터
+    else:
+        send_dgram_msg = make_data_message('DATA', last_block_number, "")  # 데이터
+        last_block_max_state = False
+    #print(f"send put data = {send_dgram_msg}")
+    socket_obj.sendto(send_dgram_msg, recv_address)
+    if (not last_block_max_state) and (len(data_piece) == 512) and (len(file_data_list) == 0):  # 데이터 크기가 512 배수인 경우
+        #print(f"데이터의 크기가 512배수입니다.")
+        last_block_max_state = True
+
+
 def get_file(socket_obj, address, opcode, file_name):
     send_msg = make_rq_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
-    #print(f"{address} => {send_msg}")
     file = open(file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
     last_block_number = 0  # 블럭 번호 저장
     socket_obj.sendto(send_msg, address)  # RRQ 송신
@@ -187,23 +244,8 @@ def get_file(socket_obj, address, opcode, file_name):
     file.close()
 
 
-def send_rq(socket_obj, address, opcode, file_name):
-    send_msg = make_rq_message(opcode, file_name, MODE)  # RQ 바이트열 생성
-    socket_obj.sendto(send_msg, address)  # WQ 송신
-    timeout_counter = 0
-    while True:
-        try:
-            data, recv_address = socket_obj.recvfrom(BUFF_SIZE)
-        except TimeoutError:
-            socket_obj.sendto(send_msg, address)  # WRQ 송신
-            timeout_counter += 1
-            if timeout_counter > SOCKET_TIME_OUT_MAX:
-                raise
-            continue
-        return data, recv_address
-    # todo 아직 만들지 않음. RRQ/WRQ보내고 응답받는건 따로 만들어야 함. 서버에서는 RQ보내는게 아니라 받고 시작하니까.. 오늘 하루종일 하니까 머리가 하나도 안돎,,
-
 def put_file(socket_obj, address, opcode, file_name):
+    send_msg = make_rq_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
     file = open(file_name, 'r', encoding='utf-8') # 파일 읽기로 open
     file_data_list = file.read()
     last_block_number = 0  # 블럭 번호 저장
@@ -211,6 +253,14 @@ def put_file(socket_obj, address, opcode, file_name):
     timeout_counter = 0
     print(WS)
     while True:
+        try:
+            data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+        except TimeoutError:
+            socket_obj.sendto(send_msg, address)  # WRQ 송신
+            timeout_counter += 1
+            if timeout_counter > SOCKET_TIME_OUT_MAX:
+                raise
+            continue
         data_split_list = data_check(data)  # 데이터 분류
         print(f"from server[{address}] : no.{data_split_list['number']}  type {data_split_list['opcode']}  data {data_split_list['data']}")
 

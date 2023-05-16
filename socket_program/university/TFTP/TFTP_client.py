@@ -46,14 +46,19 @@ if __name__ == "__main__":
                             keyboard_input_state = STATE_CODE['INPUT_COMMAND']
                             continue
                     print(f"{command} file :{input_file_name} start...")
-                    get_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    # get_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    data, address = send_rq(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    while True:  # GET(RRQ) process
+                        data_split_list = data_check(data)
                 elif command == 'PUT':
                     if not os.path.isfile('./'+input_file_name):
                         print(f"해당 파일({input_file_name})이 존재하지 않습니다.")
                         keyboard_input_state = STATE_CODE['INPUT_COMMAND']  # 명령어 입력으로
                         continue
                     print(f"{command} file :{input_file_name} start...")
-                    put_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    # put_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    while True:  # PUT(WRQ) process
+                        pass
                 end_time = time.time() - start_time
                 print(f"time = {end_time:.3f}")
                 print("")
