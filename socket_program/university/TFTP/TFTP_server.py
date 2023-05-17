@@ -12,10 +12,8 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 host = ''
-port = 69
+port = 50069
 BACKLOG = 5
-
-TFTP_ROOT_DIR = './TFTP_ROOT'
 
 address = (host, port)
 sock.bind(address)
@@ -25,26 +23,38 @@ def thread_process(in_message, in_client_address):
     print(f"start thread")
     serve_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     serve_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    serve_sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
 
     rq_split_list = rq_check(in_message)
     send_msg = ""
     print(rq_split_list)
-    file_path = TFTP_ROOT_DIR + rq_split_list['filename']
-    block_number = 0
+    #block_number = 0
     if rq_split_list['opcode'] == MESSAGE_OP_CODE['RRQ']:  # rrq 수신한 경우
+        print("send RRQ")
         #send_msg = make_error_message(0x00, "not implemented yet (RRQ)")
-        if not os.path.isfile(file_path):  # 파일이 없는 경우
-            send_msg = make_data_message(0x01, ERROR_CODE[0x01])  # 0x01: "File not found."
+        if not os.path.isfile(TFTP_ROOT_DIR + rq_split_list['filename'].decode()):  # 파일이 없는 경우
+            send_msg = make_error_message(0x01, ERROR_CODE[0x01])  # 0x01: "File not found."
+            serve_sock.sendto(send_msg, in_client_address)
         else:
-            open_file = open(file_path, 'r', encoding="utf-8")
-            put_file(serve_sock, in_client_address, "RRQ", input_file_name)
+            """
+            todo 자꾸 코드가 멈춤. 뭐가 문제인지 아직 파악을 못함
+            try:
+                rrq_server(serve_sock, in_client_address, rq_split_list['filename'].decode())
+            except Exception as e:
+                print(f"server ERROR! {e}")
+            """
+            send_msg = make_error_message(0x00, "not implemented yet (RRQ)")
+            serve_sock.sendto(send_msg, in_client_address)
     elif rq_split_list['opcode'] == MESSAGE_OP_CODE['WRQ']:  # WRQ 수신한 경우
-        #while True:
-        send_msg = make_error_message(0x00, "not implemented yet (WRQ)")
+        print("send WRQ")
+        try:
+            wrq_server(serve_sock, in_client_address, rq_split_list['filename'].decode())
+        except Exception as e:
+            print(f"server ERROR! {e}")
+        #send_msg = make_error_message(0x00, "not implemented yet (WRQ)")
     else:
         send_msg = make_error_message(0x05, ERROR_CODE[0x05])  # 0x05: "Unknown transfer ID."
 
-    serve_sock.sendto(send_msg, in_client_address)
     serve_sock.close()
 
 

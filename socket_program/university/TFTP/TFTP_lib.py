@@ -19,6 +19,7 @@ MODE = 'netascii'  # netascii(=text)
 TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
 SOCKET_TIME_OUT = 10
 SOCKET_TIME_OUT_MAX = 3
+TFTP_ROOT_DIR = './TFTP_ROOT/'  # 서버 TFTP data root dir
 WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
 
 COMMAND_ACTION_LIST = ['GET', 'PUT']  # 명령어 리스트
@@ -207,7 +208,7 @@ def put_data_loop(socket_obj, recv_data, recv_address, file_name):
     return True
 
 
-def get_file(socket_obj, address, opcode, file_name):
+def get_file(socket_obj, address, opcode, file_name):  # client
     send_msg = make_rq_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
     file = open(file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
     last_block_number = 0  # 블럭 번호 저장
@@ -249,17 +250,55 @@ def get_file(socket_obj, address, opcode, file_name):
     file.close()
 
 
-def put_file(socket_obj, address, opcode, file_name):
+def wrq_server(socket_obj, address, file_name):  # client
+    file = open(TFTP_ROOT_DIR + file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
+    last_block_number = 0  # 블럭 번호 저장
+    timeout_counter = 0
+    print(WS)
+    while True:
+        send_ack_msg = make_ack_message(last_block_number)  # ACK 바이트열 생성
+        socket_obj.sendto(send_ack_msg, address)  # ACK 송신
+        try:
+            data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+        except TimeoutError:
+            socket_obj.sendto(send_ack_msg, address)  # ACK 송신
+            timeout_counter += 1
+            if timeout_counter > SOCKET_TIME_OUT_MAX:
+                raise
+            continue
+        data_split_list = data_check(data)  # 데이터 분류
+        print(f"RRQ from client[{address}] : no.{data_split_list['number']}")
+
+        if (data_split_list['opcode'] == MESSAGE_OP_CODE['DATA']) and (
+                data_split_list['number'] == last_block_number + 1):  # 데이터 수신시 번호를 보고 잘 왔으면 저장
+            last_block_number = data_split_list['number']  # 블럭 번호 계수기
+            if last_block_number >= 65535: last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
+            # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
+            if data_split_list['data']:
+                file.write(data_split_list['data'])
+            # ACK 송신
+            ack_msg = make_ack_message(data_split_list['number'])
+            socket_obj.sendto(ack_msg, recv_address)
+            if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
+                break
+    print(f"server RRQ done.")
+    print(WS)
+    file.close()
+
+
+def put_file(socket_obj, address, opcode, file_name):  # client
     send_msg = make_rq_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
     file = open(file_name, 'r', encoding='utf-8') # 파일 읽기로 open
     file_data_list = file.read()
     last_block_number = 0  # 블럭 번호 저장
     last_block_max_state = False
+    socket_obj.sendto(send_msg, address)  # WRQ 송신
     timeout_counter = 0
     print(WS)
     while True:
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+            #data, address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
         except TimeoutError:
             socket_obj.sendto(send_msg, address)  # WRQ 송신
             timeout_counter += 1
@@ -295,3 +334,89 @@ def put_file(socket_obj, address, opcode, file_name):
     print(f"put file done.")
     print(WS)
     file.close()
+
+"""
+def rrq_server(socket_obj, address, file_name):  # client
+    with open(TFTP_ROOT_DIR + file_name, 'r', encoding='utf-8') as read_file: # 파일 읽기로 open
+        file_data_list = read_file.read()
+    last_block_number = 1  # 블럭 번호 저장
+    last_block_max_state = False
+    send_dgram_msg = ""
+    timeout_counter = 0
+    print(WS)
+    while True:
+        try:
+            if (len(file_data_list) <= 0) and (not last_block_max_state):
+                break
+            if send_dgram_msg == "":
+                data_piece = file_data_list[:512]
+                file_data_list = file_data_list[512:]
+                if not last_block_max_state:
+                    send_dgram_msg = make_data_message('DATA', last_block_number, data_piece)  # 데이터
+                else:
+                    send_dgram_msg = make_data_message('DATA', last_block_number, "")  # 데이터
+                    last_block_max_state = False
+                #print(f"send put data = {send_dgram_msg}")
+                if (not last_block_max_state) and (len(data_piece) == 512) and (len(file_data_list) == 0):  # 데이터 크기가 512 배수인 경우
+                    #print(f"데이터의 크기가 512배수입니다.")
+                    last_block_max_state = True
+
+            print(f"수신 전")
+            socket_obj.sendto(send_dgram_msg, address)
+            recv_data, address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+            print(f"수신 후")
+            data_split_list = data_check(recv_data)
+
+            if not (data_split_list['number'] != last_block_number):  # 블럭번호 확인
+                continue
+
+            last_block_number += 1
+            send_dgram_msg = ""
+
+        except TimeoutError:
+            print(f"timeout count {timeout_counter}")
+            socket_obj.sendto(send_dgram_msg, address)
+            timeout_counter += 1
+            if timeout_counter > SOCKET_TIME_OUT_MAX:
+                raise
+            continue
+        print(f"from client[{address}] : no.{data_split_list['number']}  type {data_split_list['opcode']}  data {data_split_list['data']}")
+    print(f"RRQ file done.")
+    print(WS)
+"""
+
+#"""
+def rrq_server(socket_obj, address, file_name):  # client
+    with open(TFTP_ROOT_DIR + file_name, 'r', encoding='utf-8') as read_file: # 파일 읽기로 open
+        file_data_list = put_data_split(read_file.read())
+    last_block_number = 1  # 블럭 번호 저장
+    data_one_block = ""  # 한 블럭 데이터 저장
+    timeout_counter = 0
+    print(WS)
+    while len(file_data_list) > 0:
+        if data_one_block == "":
+            data_one_block = file_data_list.pop(0)
+        send_dgram_msg = make_data_message('DATA', last_block_number, data_one_block)  # 데이터
+        try:
+            socket_obj.sendto(send_dgram_msg, address)
+        except TimeoutError:
+            socket_obj.sendto(data_one_block, address)
+            timeout_counter += 1
+            if timeout_counter > SOCKET_TIME_OUT_MAX:
+                raise
+            continue
+
+        #print(f"{last_block_number}  {data_one_block}")
+        recv_data, address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+        data_split_list = data_check(recv_data)
+
+        if not data_split_list['number'] != last_block_number:  # 블럭번호 확인
+            continue
+
+        last_block_number += 1
+        data_one_block = ""
+        #print(f"from client[{address}] : no.{data_split_list['number']}  type {data_split_list['opcode']}  data {data_split_list['data']}")
+    print(f"RRQ file done.")
+    print(WS)
+    
+#"""
