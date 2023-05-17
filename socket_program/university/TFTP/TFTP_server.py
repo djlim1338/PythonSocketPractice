@@ -24,6 +24,7 @@ def thread_process(in_message, in_client_address):
     serve_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     serve_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serve_sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
+    #serve_sock.bind(("", 0))
 
     rq_split_list = rq_check(in_message)
     send_msg = ""
@@ -43,6 +44,7 @@ def thread_process(in_message, in_client_address):
             except Exception as e:
                 print(f"server ERROR! {e}")
             """
+            print("not implemented yet (RRQ)")
             send_msg = make_error_message(0x00, "not implemented yet (RRQ)")
             serve_sock.sendto(send_msg, in_client_address)
     elif rq_split_list['opcode'] == MESSAGE_OP_CODE['WRQ']:  # WRQ 수신한 경우
@@ -54,6 +56,7 @@ def thread_process(in_message, in_client_address):
         #send_msg = make_error_message(0x00, "not implemented yet (WRQ)")
     else:
         send_msg = make_error_message(0x05, ERROR_CODE[0x05])  # 0x05: "Unknown transfer ID."
+        serve_sock.sendto(send_msg, in_client_address)
 
     serve_sock.close()
 

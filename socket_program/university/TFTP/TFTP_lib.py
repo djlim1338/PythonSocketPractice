@@ -261,10 +261,11 @@ def wrq_server(socket_obj, address, file_name):  # client
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
         except TimeoutError:
-            socket_obj.sendto(send_ack_msg, address)  # ACK 송신
+            #socket_obj.sendto(send_ack_msg, address)  # ACK 송신
             timeout_counter += 1
             if timeout_counter > SOCKET_TIME_OUT_MAX:
                 raise
+            print("timeout resend")
             continue
         data_split_list = data_check(data)  # 데이터 분류
         print(f"RRQ from client[{address}] : no.{data_split_list['number']}")
@@ -281,7 +282,7 @@ def wrq_server(socket_obj, address, file_name):  # client
             socket_obj.sendto(ack_msg, recv_address)
             if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
                 break
-    print(f"server RRQ done.")
+    print(f"server WRQ done.")
     print(WS)
     file.close()
 
@@ -304,6 +305,7 @@ def put_file(socket_obj, address, opcode, file_name):  # client
             timeout_counter += 1
             if timeout_counter > SOCKET_TIME_OUT_MAX:
                 raise
+            print("timeout resend")
             continue
         data_split_list = data_check(data)  # 데이터 분류
         print(f"from server[{address}] : no.{data_split_list['number']}  type {data_split_list['opcode']}  data {data_split_list['data']}")
