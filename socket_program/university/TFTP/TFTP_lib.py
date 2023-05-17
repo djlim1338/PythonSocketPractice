@@ -17,7 +17,7 @@ BUFF_SIZE = 2048
 DATA_MAX_SIZE = 512
 MODE = 'netascii'  # netascii(=text)
 TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
-SOCKET_TIME_OUT = 2
+SOCKET_TIME_OUT = 10
 SOCKET_TIME_OUT_MAX = 3
 WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
 
@@ -152,7 +152,7 @@ def send_rq(socket_obj, address, opcode, file_name):  # RRQ/WRQ send
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)
         except TimeoutError:
-            socket_obj.sendto(send_msg, address)  # WRQ 송신
+            socket_obj.sendto(send_msg, address)  # RQ 송신
             timeout_counter += 1
             if timeout_counter > SOCKET_TIME_OUT_MAX:
                 raise
@@ -173,33 +173,38 @@ def put_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 �
     return put_data_list
 
 
-def put_data_loop(socket_obj, recv_data, recv_address):
+def put_data_loop(socket_obj, recv_data, recv_address, file_name):
+    print("start put loop...")
     data_split_list = data_check(recv_data)
-    last_block_number = data_split_list['number']
+    last_block_number = data_split_list['number']  # 첫 ACK에대한 숫자. 0
+    with open('./' + file_name, "r", encoding="utf-8") as read_file:
+        read_data = read_file.read().encode(encoding="utf-8")
+    print("file_open")
+    put_data = put_data_split(read_data)
+    print("put data split")
+    put_one_data = ""
     timeout_counter = 0
-    while True:
-        if data_split_list['']
-
-
-
-def send_data(socket_obj, recv_data, address):
-    timeout_counter = 0
-    print(WS)
-    if (len(file_data_list) <= 0) and (not last_block_max_state):
-        break
-    last_block_number += 1
-    data_piece = file_data_list[:512]
-    file_data_list = file_data_list[512:]
-    if not last_block_max_state:
-        send_dgram_msg = make_data_message('DATA', last_block_number, data_piece)  # 데이터
-    else:
-        send_dgram_msg = make_data_message('DATA', last_block_number, "")  # 데이터
-        last_block_max_state = False
-    #print(f"send put data = {send_dgram_msg}")
-    socket_obj.sendto(send_dgram_msg, recv_address)
-    if (not last_block_max_state) and (len(data_piece) == 512) and (len(file_data_list) == 0):  # 데이터 크기가 512 배수인 경우
-        #print(f"데이터의 크기가 512배수입니다.")
-        last_block_max_state = True
+    while put_data:
+        print(f"from server {data_split_list}")
+        if (data_split_list['opcode'] == MESSAGE_OP_CODE['ACK']) and (data_split_list['number'] == last_block_number):
+            try:
+                if put_one_data == "":
+                    put_one_data = put_data.pop()
+                socket_obj.sendto(put_one_data, recv_address)
+                print(f"send {put_one_data}{recv_address}")
+                recv_data, recv_address = socket_obj.recvfrom(BUFF_SIZE)
+                print(f"send comp")
+                data_split_list = data_check(recv_data)
+                last_block_number += 1
+                put_one_data = ""
+            except TimeoutError:
+                socket_obj.sendto(put_one_data, recv_address)
+                timeout_counter += 1
+                if timeout_counter > SOCKET_TIME_OUT_MAX:
+                    raise
+        else:
+            raise Exception("wrong response. need ACK")
+    return True
 
 
 def get_file(socket_obj, address, opcode, file_name):
