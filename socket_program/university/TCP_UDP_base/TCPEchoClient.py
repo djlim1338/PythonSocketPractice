@@ -7,8 +7,9 @@ import socket
 
 #server_host = '203.250.137.147'
 #server_host = '203.250.133.86'
-server_host = '203.250.133.88'
-server_port = 50905
+#server_host = '203.250.133.88'
+server_host = '127.0.0.1'
+server_port = 8831
 BUFF_SIZE = 1024
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

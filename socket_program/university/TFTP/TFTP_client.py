@@ -1,91 +1,105 @@
-#
-# TFTP_client.py
-# djlim
-#
+"""
 
+TFTP_client.py
+djlim
 
-import struct
-import socket
-import os
-import sys
+"""
 
-BUFF_SIZE = 1024
-DATA_MAX_SIZE = 512
-RRQ_OPCODE = 0x0001  # RRQ(read)
-ACK_OPCODE = 0x0004  # ACK
-RRQ_MODE = 'netascii'  # netascii(=text)
-TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
-WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
+from TFTP_lib import *
 
-DATA_INDEX_OPCODE = 0
-DATA_INDEX_BLOCK_NUMBER = 1
-DATA_INDEX_DATA = 2
-DATA_INDEX_LAST_STATE = 3
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
+sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
 
-MESSAGE_OP_CODE = {  # op code
-    'RRQ': '0001',
-    'WRQ': '0002',
-    'DATA': '0003',
-    'ACK': '0004',
-    'ERROR': '0005',
-    '0001': 'RRQ',
-    '0002': 'WRQ',
-    '0003': 'DATA',
-    '0004': 'ACK',
-    '0005': 'ERROR',
-}
+if __name__ == "__main__":
+    server_domain = "localhost"
+    server_host = '127.0.0.1'
+    server_port = 69
+    input_address = (server_host, server_port)
+    input_command = ""
+    input_file_name = ""
 
+    keyboard_input_state = STATE_CODE['INPUT_SKIP']
+    while True:
+        if keyboard_input_state == STATE_CODE['INPUT_COMMAND']:  # 명령어 입력
+            try:
+                input_command = input(f"commend : ")
+                if input_command.upper() in COMMAND_EXIT_LIST: sys.exit(0)  # 종료 코드시 코드 종료
+                command_split = input_command.split()
+                command_split[0] = command_split[0].upper()
+                if command_split[0] in COMMAND_ACTION_LIST:
+                    command = command_split[0]
+                    input_file_name = command_split[1]
+                    keyboard_input_state = STATE_CODE['PROCESSING_COMMAND']
+                else:
+                    print(f"Unknown command! {command_split[0]}")
+            except Exception as e:
+                keyboard_input_state = STATE_CODE['INPUT_COMMAND']
+                print(f"Please enter the correct command")
 
-class TFTPClient:
-    _file_name = ""
-    # _dgram_dic = {}
+        elif keyboard_input_state == STATE_CODE['PROCESSING_COMMAND']:  # 명령어 처리
+            start_time = time.time()
+            try:
+                if command == 'GET':
+                    if os.path.isfile('./'+input_file_name):
+                        over_write_answer = input_y_n(f"해당 파일({input_file_name})이 이미 존재합니다. 덮어 씌우시겠습니까? (y/n): ")
+                        if not over_write_answer: # n선택시 명령어 입력으로
+                            keyboard_input_state = STATE_CODE['INPUT_COMMAND']
+                            continue
+                    print(f"{command} file :{input_file_name} start...")
+                    get_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    #data, address = send_rq(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    #while True:  # GET(RRQ) process
+                    #    pass
+                elif command == 'PUT':
+                    if not os.path.isfile('./'+input_file_name):
+                        print(f"해당 파일({input_file_name})이 존재하지 않습니다.")
+                        keyboard_input_state = STATE_CODE['INPUT_COMMAND']  # 명령어 입력으로
+                        continue
+                    print(f"{command} file :{input_file_name} start...")
+                    put_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    #data, address = send_rq(sock, input_address, COMMAND_OPCODE[command], input_file_name)
+                    #while True:  # PUT(WRQ) process
+                    #data_split_list = data_check(data)
+                    #put_data_loop(sock, data, address, input_file_name)
+                end_time = time.time() - start_time
+                print(f"time = {end_time:.3f}")
+                print("")
+            except Exception as e:
+                print(f"ERROR! {e}")
+            finally:
+                keyboard_input_state = STATE_CODE['INPUT_COMMAND']
 
-    def __init__(self, server_host, server_port):
-        self._udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._address = (server_host, server_port)
+        elif keyboard_input_state == STATE_CODE['INPUT_SKIP']:  # 기본값 여부
+            skip_answer = input_y_n("[skip] setting value default (y/n): ")
+            if skip_answer: keyboard_input_state = STATE_CODE['PRINT_ADDRESS']
+            else: keyboard_input_state = STATE_CODE['INPUT_HOST']
 
-    def get_address(self):
-        return self._address
+        elif keyboard_input_state == STATE_CODE['INPUT_HOST']:  # server IP address 입력
+            server_host = input("server ip: ")
+            if server_host.upper() in COMMAND_EXIT_LIST: sys.exit(0) # 종료 코드시 코드 종료
+            if validators.domain(server_host):  # 입력한 값이 도메인
+                server_domain = server_host
+                server_host = socket.gethostbyname(server_domain)
+            elif validators.ip_address.ipv4(server_host) or validators.ip_address.ipv6(server_host):  # 입력한 값이 주소
+                print("Scanning domain...")
+                try:
+                    server_domain = socket.gethostbyaddr(server_host)
+                except Exception as e:
+                    server_domain = "unknown_domain"
+                finally:
+                    print(f"doamin:{server_domain}")
+            keyboard_input_state = STATE_CODE['INPUT_PORT']
 
-    def send_message(self, opcode, file_name, mode=RRQ_MODE):
-        self._file_name = file_name
-        pack_str = f"!H{len(file_name)}sb{len(mode)}sb"
-        send_byte_data = struct.pack(pack_str, opcode, file_name.encode(), TFTP_MESSAGE_SPACE, mode.encode(),
-                                     TFTP_MESSAGE_SPACE)
-        self._udp_socket.sendto(send_byte_data, self._address)
+        elif keyboard_input_state == STATE_CODE['INPUT_PORT']:  # server port 입력
+            server_port = input("server port: ")
+            try:
+                server_port = int(server_port)  # 입력값 정수도 변환 시도
+                keyboard_input_state = STATE_CODE['PRINT_ADDRESS']
+            except Exception as e:
+                if server_port.upper() in COMMAND_EXIT_LIST: sys.exit(0)  # 종료 코드시 코드 종료
+                print("Please enter an integer")  # 실패시 안내문장 출력
 
-    def recv_message(self):
-        while True:
-            data, address = self._udp_socket.recvfrom(BUFF_SIZE)
-            byte_data_split_list = data.hex('-').split('-')  # 헥사로 표현하여 1비트씩 끊어서 리스트에 저장. 자료형은 str
-
-            opcode = ''.join(byte_data_split_list[0:2])  # opcode 추출
-            block_number = int(''.join(byte_data_split_list[2:4]), 16)  # 블럭 번호 추출. hex문자열 => 자료형 int 로
-            last_block = False
-
-            if opcode == MESSAGE_OP_CODE['ERROR']:
-                data_hex = ''.join(byte_data_split_list[4:-1])
-                print(byte_data_split_list[4:-1])
-                print(data_hex)
-            else:
-                data_hex = ''.join(byte_data_split_list[4:])
-
-            data_str = bytes.fromhex(data_hex).decode()
-            data_length = len(data_str)  # 데이터 길이
-
-            if data_length < DATA_MAX_SIZE:
-                last_block = True
-
-            return_dic = {
-                "opcode": opcode,
-                "number": block_number,
-                "data": data_str,
-                "last": last_block,
-                "address": address
-            }
-            return return_dic
-
-    def send_ack(self, number, address):
-        pack_str = f"!2H"
-        send_byte_data = struct.pack(pack_str, ACK_OPCODE, number)
-        self._udp_socket.sendto(send_byte_data, address)
+        elif keyboard_input_state == STATE_CODE['PRINT_ADDRESS']:  # server address 출력
+            print(f"server address is [{server_domain}]{server_host}:{server_port}")
+            input_address = (server_host, server_port)
+            keyboard_input_state = STATE_CODE['INPUT_COMMAND']

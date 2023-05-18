@@ -1,6 +1,6 @@
 """
 
- TFTP_client.py
+ TFTP_run.py
  djlim
 
  validators
@@ -18,20 +18,19 @@ import sys
 import time
 import validators
 
+
 BUFF_SIZE = 2048
 DATA_MAX_SIZE = 512
-RRQ_OPCODE = 0x0001  # RRQ(read)
-WRQ_OPCODE = 0x0002  # WRQ(write)
-ACK_OPCODE = 0x0004  # ACK
 MODE = 'netascii'  # netascii(=text)
 TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
-TIME_OUT = 5
+SOCKET_TIME_OUT = 10
 WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
 
-COMMAND_LIST = ['GET', 'PUT']  # 명령어 리스트
+COMMAND_ACTION_LIST = ['GET', 'PUT']  # 명령어 리스트
 COMMAND_EXIT_LIST = ['EXIT', 'QUIT']  # 종료 명령어
+COMMAND_RESET_LIST = ['RESET']  # 리셋 명령어
 
-STATE_CODE = {
+STATE_CODE = {  # 무한 반복 상태 코드
     'INPUT_SKIP': 0,
     'INPUT_HOST': 1,
     'INPUT_PORT': 2,
@@ -40,34 +39,32 @@ STATE_CODE = {
     'PROCESSING_COMMAND': 5
 }
 
-COMMAND_OPCODE = {
+COMMAND_OPCODE = {  # 각 명령어에 해당하는 동작
     'GET': 'RRQ',
     'PUT': 'WRQ'
 }
 
 MESSAGE_OP_CODE = {  # op code
-    'RRQ': '0001',
-    'WRQ': '0002',
-    'DATA': '0003',
-    'ACK': '0004',
-    'ERROR': '0005',
-    '0001': 'RRQ',
-    '0002': 'WRQ',
-    '0003': 'DATA',
-    '0004': 'ACK',
-    '0005': 'ERROR',
+    'RRQ': 0x0001,
+    'WRQ': 0x0002,
+    'DATA': 0x0003,
+    'ACK': 0x0004,
+    'ERROR': 0x0005
 }
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
+sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
 
 
 def input_y_n(print_str):  # 터미널에서 YES/NO(Y/N) 받고 T/F 출력.
     try:
-        positive_answer_list = ['y', 'Y', 'yes', 'YES']
-        negative_answer_list = ['n', 'N', 'no', 'NO']
+        positive_answer_list = ['Y', 'YES']
+        negative_answer_list = ['N', 'NO']
         while True:
             _key_input = input(print_str).upper()
             if _key_input in positive_answer_list: return True
             elif _key_input in negative_answer_list: return False
-            elif _key_input.upper() in COMMAND_EXIT_LIST: sys.exit(0) # 종료 코드시 코드 종료
+            elif _key_input in COMMAND_EXIT_LIST: sys.exit(0) # 종료 코드시 코드 종료
             else:
                 print(f"Words you can enter: {positive_answer_list}, {negative_answer_list}")
                 continue
@@ -76,18 +73,16 @@ def input_y_n(print_str):  # 터미널에서 YES/NO(Y/N) 받고 T/F 출력.
 
 
 def data_check(in_byte_data):
-    byte_data_split_list = in_byte_data.hex('-').split('-')  # 헥사로 표현하여 1비트씩 끊어서 리스트에 저장. 자료형은 str
-
-    opcode = ''.join(byte_data_split_list[0:2])  # opcode 추출
-    block_number = int(''.join(byte_data_split_list[2:4]), 16)  # 블럭 번호 추출. hex문자열 => 자료형 int 로
+    opcode = int.from_bytes(in_byte_data[:2], 'big')
+    block_number = int.from_bytes(in_byte_data[2:4], 'big')
     last_block = False
 
     if opcode == MESSAGE_OP_CODE['ERROR']:
-        data_hex = ''.join(byte_data_split_list[4:-1])
+        data_bytes = int.from_bytes(in_byte_data[4:1], 'big')
     else:
-        data_hex = ''.join(byte_data_split_list[4:])
+        data_bytes = int.from_bytes(in_byte_data[4:], 'big')
 
-    data_str = bytes.fromhex(data_hex).decode()
+    data_str = data_bytes.decode()  # 오류있음
     data_length = len(data_str)  # 데이터 길이
 
     if data_length < DATA_MAX_SIZE:
@@ -105,28 +100,28 @@ def data_check(in_byte_data):
 
 def make_message(opcode, file_name, mode):
     pack_str = f"!H{len(file_name)}sB{len(mode)}sB"
-    return struct.pack(pack_str, int(MESSAGE_OP_CODE[opcode]), file_name.encode(), TFTP_MESSAGE_SPACE, mode.encode(), TFTP_MESSAGE_SPACE)
+    return struct.pack(pack_str, MESSAGE_OP_CODE[opcode], file_name.encode(), TFTP_MESSAGE_SPACE, mode.encode(), TFTP_MESSAGE_SPACE)
 
 
 def make_data_message(opcode, block_number, data):
     pack_str = f"!HH{len(data)}s"
-    return struct.pack(pack_str, int(MESSAGE_OP_CODE[opcode]), block_number, data.encode())
+    return struct.pack(pack_str, MESSAGE_OP_CODE[opcode], block_number, data.encode())
 
 
 def make_ack_message(data_block_number):
     pack_str = f"!2H"
-    return struct.pack(pack_str, ACK_OPCODE, data_block_number)
+    return struct.pack(pack_str, MESSAGE_OP_CODE['ACK'], data_block_number)
 
 
-def get_file(tftp_obj, address, opcode, file_name):
+def get_file(socket_obj, address, opcode, file_name):
     send_msg = make_message(opcode, file_name, MODE)  # RRQ 바이트열 생성
     #print(f"{address} => {send_msg}")
-    tftp_obj.sendto(send_msg, address)  # RRQ 송신
     file = open(file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
     last_block_number = 0  # 블럭 번호 저장
+    socket_obj.sendto(send_msg, address)  # RRQ 송신
     print(WS)
     while True:
-        data, recv_address = tftp_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
+        data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
         data_split_list = data_check(data)  # 데이터 분류
         print(f"get from server[{address}] : no.{data_split_list['number']}")
 
@@ -145,7 +140,7 @@ def get_file(tftp_obj, address, opcode, file_name):
                 file.write(data_split_list['data'])
             # ACK 송신
             ack_msg = make_ack_message(data_split_list['number'])
-            tftp_obj.sendto(ack_msg, recv_address)
+            socket_obj.sendto(ack_msg, recv_address)
             if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
                 break
     print(f"get file done.")
@@ -153,18 +148,18 @@ def get_file(tftp_obj, address, opcode, file_name):
     file.close()
 
 
-def put_file(tftp_obj, address, opcode, file_name):
+def put_file(socket_obj, address, opcode, file_name):
     send_msg = make_message(opcode, file_name, MODE)  # WRQ 바이트열 생성
-    tftp_obj.sendto(send_msg, address)  # WRQ 송신
     file = open(file_name, 'r', encoding='utf-8') # 파일 읽기로 open
     file_data_list = file.read()
     last_block_number = 0  # 블럭 번호 저장
     last_block_max_state = False
+    socket_obj.sendto(send_msg, address)  # WRQ 송신
     print(WS)
     while True:
-        data, recv_address = tftp_obj.recvfrom(BUFF_SIZE)
+        data, recv_address = socket_obj.recvfrom(BUFF_SIZE)
         data_split_list = data_check(data)  # 데이터 분류
-        print(f"from server[{address}] : no.{data_split_list['number']}  type {MESSAGE_OP_CODE[data_split_list['opcode']]}  data {data_split_list['data']}")
+        print(f"from server[{address}] : no.{data_split_list['number']}  type {data_split_list['opcode']}  data {data_split_list['data']}")
 
         if data_split_list['opcode'] == MESSAGE_OP_CODE['ERROR']:  # 에러코드 발생시 알린 후 종료
             error_str = f"ERROR!! code({data_split_list['opcode']})  {data_split_list['data']}"
@@ -185,7 +180,7 @@ def put_file(tftp_obj, address, opcode, file_name):
                 send_dgram_msg = make_data_message('DATA', last_block_number, "")  # 데이터
                 last_block_max_state = False
             #print(f"send put data = {send_dgram_msg}")
-            tftp_obj.sendto(send_dgram_msg, recv_address)
+            socket_obj.sendto(send_dgram_msg, recv_address)
             if (not last_block_max_state) and (len(data_piece) == 512) and (len(file_data_list) == 0):  # 데이터 크기가 512 배수인 경우
                 #print(f"데이터의 크기가 512배수입니다.")
                 last_block_max_state = True
@@ -200,7 +195,6 @@ if __name__ == "__main__":
     server_host = '127.0.0.1'
     server_port = 69
     input_address = (server_host, server_port)
-    sock = ""
     input_command = ""
     input_file_name = ""
 
@@ -212,7 +206,7 @@ if __name__ == "__main__":
                 if input_command.upper() in COMMAND_EXIT_LIST: sys.exit(0)  # 종료 코드시 코드 종료
                 command_split = input_command.split()
                 command_split[0] = command_split[0].upper()
-                if command_split[0] in COMMAND_LIST:
+                if command_split[0] in COMMAND_ACTION_LIST:
                     command = command_split[0]
                     input_file_name = command_split[1]
                     keyboard_input_state = STATE_CODE['PROCESSING_COMMAND']
@@ -280,7 +274,5 @@ if __name__ == "__main__":
 
         elif keyboard_input_state == STATE_CODE['PRINT_ADDRESS']:  # server address 출력
             print(f"server address is [{server_domain}]{server_host}:{server_port}")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
-            sock.settimeout(TIME_OUT)
             input_address = (server_host, server_port)
             keyboard_input_state = STATE_CODE['INPUT_COMMAND']
