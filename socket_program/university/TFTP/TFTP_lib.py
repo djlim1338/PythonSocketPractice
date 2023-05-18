@@ -269,6 +269,8 @@ def wrq_server(socket_obj, address, file_name):  # client
             continue
         data_split_list = data_check(data)  # 데이터 분류
         print(f"RRQ from client[{address}] : no.{data_split_list['number']}")
+        if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
+            break
 
         if (data_split_list['opcode'] == MESSAGE_OP_CODE['DATA']) and (
                 data_split_list['number'] == last_block_number + 1):  # 데이터 수신시 번호를 보고 잘 왔으면 저장
@@ -276,10 +278,7 @@ def wrq_server(socket_obj, address, file_name):  # client
             if last_block_number >= 65535: last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
-                file.write(data_split_list['data'])\
-
-            if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
-                break
+                file.write(data_split_list['data'])
     print(f"server WRQ done.")
     print(WS)
     file.close()
