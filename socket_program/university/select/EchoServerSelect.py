@@ -10,7 +10,7 @@ import threading
 import select
 
 host = ''
-port = 50905
+port = 50000
 BUFF_SIZE = 1024
 BACKLOG = 5
 address = (host, port)
