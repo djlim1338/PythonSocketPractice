@@ -5,8 +5,8 @@
 
 import socket
 
-server_host = '203.250.133.86'
-#server_host = '192.168.0.7'
+#server_host = '203.250.133.86'
+server_host = '192.168.0.7'
 #server_host = '127.0.0.1'
 server_port = 50705
 #server_port = 69
