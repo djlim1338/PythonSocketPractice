@@ -256,7 +256,7 @@ def wrq_server(socket_obj, address, file_name):  # client
     timeout_counter = 0
     print(WS)
     while True:
-        send_ack_msg = make_ack_message(last_block_number)  # ACK 바이트열 생성
+        send_ack_msg = make_ack_message()  # ACK 바이트열 생성
         socket_obj.sendto(send_ack_msg, address)  # ACK 송신
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
@@ -276,10 +276,8 @@ def wrq_server(socket_obj, address, file_name):  # client
             if last_block_number >= 65535: last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
-                file.write(data_split_list['data'])
-            # ACK 송신
-            ack_msg = make_ack_message(data_split_list['number'])
-            socket_obj.sendto(ack_msg, recv_address)
+                file.write(data_split_list['data'])\
+
             if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
                 break
     print(f"server WRQ done.")

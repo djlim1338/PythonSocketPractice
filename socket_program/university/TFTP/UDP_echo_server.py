@@ -43,6 +43,14 @@ if __name__ == "__main__":
             t2 = threading.Thread(target=thread_process, args=(message, client_address), daemon=True)
             t2.start()
 
+            #serve_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            #serve_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+            #print(f"client = {client_address}")
+            #serve_sock.sendto(message, client_address)
+
+            #serve_sock.close()
+
     except KeyboardInterrupt:
         print(f"키보트 입력에 의한 종료")
     except Exception as e:
