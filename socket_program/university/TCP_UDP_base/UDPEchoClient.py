@@ -5,9 +5,10 @@
 
 import socket
 
-#server_host = '203.250.133.86'
-server_host = '192.168.0.7'
+server_host = '203.250.133.86'
+#server_host = '192.168.0.7'
 #server_host = '127.0.0.1'
+#server_host = '172.17.158.188'
 server_port = 50705
 #server_port = 69
 BUFF_SIZE = 1024
