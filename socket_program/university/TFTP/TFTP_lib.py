@@ -160,7 +160,7 @@ def send_rq(socket_obj, address, opcode, file_name):  # RRQ/WRQ send
             continue
         return data, recv_address
 
-
+"""
 def put_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 리스트에 저장
     put_data_list = []
     while True:
@@ -173,7 +173,7 @@ def put_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 �
                 put_data_list.append("")
             break
     return put_data_list
-
+"""
 
 def pop_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 리스트에 저장
     data_piece = put_data[:512]
@@ -346,7 +346,6 @@ def wrq_server(socket_obj, address, file_name):  # server WRQ(PUT)
     print(f"server WRQ done.")
     print(WS)
     write_file.close()
-
 
 
 def put_file(socket_obj, address, opcode, file_name):  # client
