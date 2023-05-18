@@ -284,7 +284,7 @@ def get_file(socket_obj, address, opcode, file_name):  # client
             if last_block_number >= 65535:
                 last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
                 print(f"block number over 65535")
-            if last_block_number % 1000:
+            if last_block_number % 1000 == 0:
                 print(f"block number is [{last_block_number}]")
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
@@ -333,7 +333,7 @@ def wrq_server(socket_obj, address, file_name):  # server WRQ(PUT)
             if last_block_number >= 65535:
                 last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
                 print(f"block number over 65535")
-            if last_block_number % 1000:
+            if last_block_number % 1000 == 0:
                 print(f"block number is [{last_block_number}]")
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
