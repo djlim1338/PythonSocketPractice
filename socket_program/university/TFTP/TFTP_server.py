@@ -37,16 +37,10 @@ def thread_process(in_message, in_client_address):
             send_msg = make_error_message(0x01, ERROR_CODE[0x01])  # 0x01: "File not found."
             serve_sock.sendto(send_msg, in_client_address)
         else:
-            """
-            todo 자꾸 코드가 멈춤. 뭐가 문제인지 아직 파악을 못함
             try:
                 rrq_server(serve_sock, in_client_address, rq_split_list['filename'].decode())
             except Exception as e:
                 print(f"server ERROR! {e}")
-            """
-            print("not implemented yet (RRQ)")
-            send_msg = make_error_message(0x00, "not implemented yet (RRQ)")
-            serve_sock.sendto(send_msg, in_client_address)
     elif rq_split_list['opcode'] == MESSAGE_OP_CODE['WRQ']:  # WRQ 수신한 경우
         print("send WRQ")
         try:
