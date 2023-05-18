@@ -174,6 +174,15 @@ def put_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 �
             break
     return put_data_list
 
+
+def pop_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 리스트에 저장
+    data_piece = put_data[:512]
+    if put_data:
+        put_data = put_data[512:]
+    else:
+        put_data = ""
+    return (data_piece, put_data)
+
 """
 def put_data_loop(socket_obj, recv_data, recv_address, file_name):
     print("start put loop...")
@@ -212,14 +221,16 @@ def put_data_loop(socket_obj, recv_data, recv_address, file_name):
 
 def rrq_server(socket_obj, address, file_name):  # server RRQ(GET)
     with open(TFTP_ROOT_DIR + file_name, 'r', encoding='utf-8') as read_file: # 파일 읽기로 open
-        file_data_list = put_data_split(read_file.read())
+        #file_data_list = put_data_split(read_file.read())
+        file_data = read_file.read()
     last_block_number = 1  # 블럭 번호 저장
     data_one_block = ""  # 한 블럭 데이터 저장
     timeout_counter = 0
     print(WS)
-    while len(file_data_list) > 0:
+    while True:
         if data_one_block == "":
-            data_one_block = file_data_list.pop(0)
+            #data_one_block = file_data_list.pop(0)
+            data_one_block, file_data = pop_data_split(file_data)
         send_dgram_msg = make_data_message('DATA', last_block_number, data_one_block)  # 데이터
         socket_obj.sendto(send_dgram_msg, address)
         try:
@@ -232,7 +243,10 @@ def rrq_server(socket_obj, address, file_name):  # server RRQ(GET)
             continue
 
         data_split_list = data_check(recv_data)
-        print(f"RRQ from client[{address}] : no.{data_split_list['number']}")
+        #print(f"RRQ from client[{address}] : no.{data_split_list['number']}")
+
+        if len(data_one_block) < 512:  # 마지막으로 수신한 데이터의 길이<512 => 마지막 데이터
+            break
 
         # 블럭번호 & opcode 확인
         if (data_split_list['opcode'] == MESSAGE_OP_CODE['ACK']) and (data_split_list['number'] == last_block_number):
@@ -262,12 +276,16 @@ def get_file(socket_obj, address, opcode, file_name):  # client
                 raise
             continue
         data_split_list = data_check(data)  # 데이터 분류
-        print(f"get from server[{address}] : no.{data_split_list['number']}")
+        #print(f"get from server[{address}] : no.{data_split_list['number']}")
 
         if (data_split_list['opcode'] == MESSAGE_OP_CODE['DATA']) and (
                 data_split_list['number'] == last_block_number + 1):  # 데이터 수신시 번호를 보고 잘 왔으면 저장
             last_block_number += 1  # 블럭 번호 계수기
-            if last_block_number >= 65535: last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
+            if last_block_number >= 65535:
+                last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
+                print(f"block number over 65535")
+            if last_block_number % 1000:
+                print(f"block number is [{last_block_number}]")
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
                 write_file.write(data_split_list['data'])
@@ -312,7 +330,11 @@ def wrq_server(socket_obj, address, file_name):  # server WRQ(PUT)
         if (data_split_list['opcode'] == MESSAGE_OP_CODE['DATA']) and (
                 data_split_list['number'] == (last_block_number + 1)):  # 데이터 수신시 번호를 보고 잘 왔으면 저장
             last_block_number += 1  # 블럭 번호 계수기
-            if last_block_number >= 65535: last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
+            if last_block_number >= 65535:
+                last_block_number = 0  # 다음으로 와야할 블럭 번호. 65535 -> 1 (2byte 0~65535)
+                print(f"block number over 65535")
+            if last_block_number % 1000:
+                print(f"block number is [{last_block_number}]")
             # 데이터가 있으면 파일에 작성. 데이터가 없는 경우는 데이터가 512byte의 배수라는 의미로 마지막임을 알리기 위한 공백일 수 있음
             if data_split_list['data']:
                 write_file.write(data_split_list['data'])
