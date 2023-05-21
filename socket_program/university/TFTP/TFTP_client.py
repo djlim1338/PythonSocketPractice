@@ -11,9 +11,11 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
 sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
 
 if __name__ == "__main__":
+    if not os.path.isdir(TFTP_CLIENT_ROOT_DIR):
+        os.mkdir(TFTP_CLIENT_ROOT_DIR)
     server_domain = "localhost"
     server_host = '127.0.0.1'
-    server_port = 50069  # 69
+    server_port = 69  # 50069
     input_address = (server_host, server_port)
     input_command = ""
     input_file_name = ""
@@ -40,7 +42,7 @@ if __name__ == "__main__":
             start_time = time.time()
             try:
                 if command == 'GET':
-                    if os.path.isfile('./'+input_file_name):
+                    if os.path.isfile(TFTP_CLIENT_ROOT_DIR+input_file_name):
                         over_write_answer = input_y_n(f"해당 파일({input_file_name})이 이미 존재합니다. 덮어 씌우시겠습니까? (y/n): ")
                         if not over_write_answer: # n선택시 명령어 입력으로
                             keyboard_input_state = STATE_CODE['INPUT_COMMAND']
@@ -48,7 +50,7 @@ if __name__ == "__main__":
                     print(f"{command} file :{input_file_name} start...")
                     get_file(sock, input_address, COMMAND_OPCODE[command], input_file_name)
                 elif command == 'PUT':
-                    if not os.path.isfile('./'+input_file_name):
+                    if not os.path.isfile(TFTP_CLIENT_ROOT_DIR+input_file_name):
                         print(f"해당 파일({input_file_name})이 존재하지 않습니다.")
                         keyboard_input_state = STATE_CODE['INPUT_COMMAND']  # 명령어 입력으로
                         continue

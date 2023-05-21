@@ -1,3 +1,0 @@
-
-
-ERROR!! code(0005)  TFTP Error: File too large for TFTP Protocol

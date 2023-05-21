@@ -12,7 +12,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 host = ''
-port = 50069
+port = 69  #50069
 BACKLOG = 5
 
 address = (host, port)
@@ -56,6 +56,8 @@ def thread_process(in_message, in_client_address):
 
 
 if __name__ == "__main__":
+    if not os.path.isdir(TFTP_ROOT_DIR):
+        os.mkdir(TFTP_ROOT_DIR)
     print("server starting...")
     try:
         while True:
