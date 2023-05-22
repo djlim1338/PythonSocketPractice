@@ -30,7 +30,7 @@ label1.pack()
 input_text1 = tkinter.StringVar()
 input_text1.set("Tkinter")
 
-text_field = tk.Entry(top, textvariable=textvariable=input_text1, width=10)
+text_field = tk.Entry(top, textvariable=input_text1, width=10)
 text_field.pack()
 
 

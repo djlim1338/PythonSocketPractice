@@ -5,8 +5,7 @@ djlim
 
 """
 
-import socket
-import threading
+from TCP_chat_lib import *
 import tkinter as tk
 
 

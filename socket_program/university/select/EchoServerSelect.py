@@ -5,8 +5,6 @@
 
 import socket
 import sys
-import threading
-
 import select
 
 host = ''
@@ -39,11 +37,11 @@ while True:
                 sys.exit(0)
         else:
             data = sock.recv(BUFF_SIZE)
-            if not data:
+            if data:
+                print(f"{sock.getpeername()}로부터 메시지 {data.decode()}")
+                sock.sendall(data)
+            else:
                 print(f"{sock.getpeername()}끊김")
                 sock.close()
                 rd_list.remove(sock)
-            else:
-                print(f"{sock.getpeername()}로부터 메시지 {data.decode()}")
-                sock.sendall(data)
 

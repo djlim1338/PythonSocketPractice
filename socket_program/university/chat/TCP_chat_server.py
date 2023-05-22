@@ -5,8 +5,7 @@ djlim
 
 """
 
-import socket
-import threading
+from TCP_chat_lib import *
 
 
 host = ''
@@ -23,9 +22,9 @@ chat_room_dictionary = {}
 nickname_list = []
 
 
-def send_msg_to_all_user(msg_byte):
+def broadcast(msg_byte):
     for user_socket in chat_room_dictionary:
-        chat_room_dictionary[user_socket].send(msg_byte)
+        chat_room_dictionary[user_socket].sendall(msg_byte)
 
 
 def thread_tcp_chat(client_socket, client_address):
@@ -36,8 +35,7 @@ def thread_tcp_chat(client_socket, client_address):
     print(f"client connect! {client_address}")
     print(f"connect {chat_room_dictionary}")
     print(f"nickname {nickname_list}")
-    send_msg = f"Hello client, send me your nickname."
-    client_socket.send(send_msg.encode())
+    client_socket.send(HELLO_MSG.encode())
     while True:
         try:
             data_byte = client_socket.recv(BUF_SIZE)
@@ -48,18 +46,18 @@ def thread_tcp_chat(client_socket, client_address):
         #print(f"{client_address} : {data}")
         if data:
             if nickname:
-                send_msg_to_all_user(data_byte)
+                broadcast(data_byte)
             else:
                 if data in nickname_list:
                     send_msg = f"[{data}] nickname that already exists. re send your nickname."
-                    client_socket.send(send_msg.encode())
+                    client_socket.sendall(send_msg.encode())
                 else:
                     nickname = data
                     nickname_list.append(nickname)
                     send_msg = f"========== your nickname is [{data}] start chatting! ==========\nIf you want to leave the chat room, enter '-exit' or '-quit'\n"
-                    client_socket.send(send_msg.encode())
+                    client_socket.sendall(send_msg.encode())
                     send_all_msg = f"---------- [{nickname}] has entered the chat room. ----------\n"
-                    send_msg_to_all_user(send_all_msg.encode())
+                    broadcast(send_all_msg.encode())
         else:
             send_msg = f"[{data}] good bye!"
             client_socket.send(send_msg.encode())
