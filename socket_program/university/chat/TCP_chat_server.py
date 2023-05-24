@@ -45,8 +45,17 @@ def thread_tcp_chat(client_socket, client_address):
         data = data_byte.decode()
         #print(f"{client_address} : {data}")
         if data:
+            if data.upper() in COMMEND_EXIT:
+                if nickname:
+                    send_msg = f"[{nickname}] good bye!"
+                    client_socket.sendall(send_msg.encode())
+                    time.sleep(0.1)
+                    send_msg = " "
+                    client_socket.sendall(send_msg.encode())
+                break
             if nickname:
-                broadcast(data_byte)
+                send_msg = f"{nickname} > {data}"
+                broadcast(send_msg.encode())
             else:
                 if data in nickname_list:
                     send_msg = f"[{data}] nickname that already exists. re send your nickname."
@@ -54,16 +63,20 @@ def thread_tcp_chat(client_socket, client_address):
                 else:
                     nickname = data
                     nickname_list.append(nickname)
-                    send_msg = f"========== your nickname is [{data}] start chatting! ==========\nIf you want to leave the chat room, enter '-exit' or '-quit'\n"
+                    send_msg = f"========== your nickname is [{data}] start chatting! =========="
                     client_socket.sendall(send_msg.encode())
-                    send_all_msg = f"---------- [{nickname}] has entered the chat room. ----------\n"
+                    time.sleep(0.1)
+                    send_msg = EXIT_GUIDE_MSG
+                    client_socket.sendall(send_msg.encode())
+                    time.sleep(0.1)
+                    send_all_msg = f"---------- [{nickname}] has entered the chat room. ----------"
                     broadcast(send_all_msg.encode())
         else:
-            send_msg = f"[{data}] good bye!"
-            client_socket.send(send_msg.encode())
             break
     del chat_room_dictionary[client_address]
     if nickname:
+        send_msg = f"[{nickname}] left the chat room."
+        broadcast(send_msg.encode())
         nickname_list.remove(nickname)
     client_socket.close()
     print(f"client disconnected! {client_address}")

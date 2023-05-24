@@ -12,7 +12,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 host = ''
-port = 69  #50069
+port = 50069 #69  #50069
 BACKLOG = 5
 
 address = (host, port)

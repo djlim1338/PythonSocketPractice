@@ -189,7 +189,7 @@ def rrq_server(socket_obj, address, file_name):  # server RRQ(GET)=
             print("timeout DATA resend")
             continue
         data_split_list = data_check(recv_data)
-        if len(data_one_block) < DATA_MAX_SIZE:  # 마지막으로 수신한 데이터의 길이<512 => 마지막 데이터
+        if len(data_one_block) < DATA_MAX_SIZE:  # 마지막으로 수신한 데이터의 길이<512 = 마지막 데이터
             break
 
         # 블럭번호 & opcode 확인
