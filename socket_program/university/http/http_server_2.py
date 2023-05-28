@@ -51,7 +51,7 @@ def doHTTPService(sock) :
         reqURL = "./index.html"
     else:
         reqURL = "." + reqURL
-    print(f"open file is [{reqURL}]")
+    #print(f"open file is [{reqURL}]")
 
     if os.path.isfile(reqURL):
         open_file = open(reqURL, "r", encoding="utf-8")
@@ -63,16 +63,16 @@ def doHTTPService(sock) :
     headerLine1 = 'Server: vshttpd 0.1\r\n'
     headerLine2 = 'Connection: close\r\n\r\n'
     sock.sendall(statusLine.encode())
-    print(statusLine)
+    #print(statusLine)
     sock.sendall(headerLine1.encode())
-    print(headerLine1)
+    #print(headerLine1)
     sock.sendall(headerLine2.encode())
-    print(headerLine2)
+    #print(headerLine2)
 
     if open_file:
         responseBody = open_file.read()
         sock.sendall(responseBody.encode())
-        print(responseBody)
+        #print(responseBody)
     print("send done")
     sock.close()
 # end of doHTTPService()
