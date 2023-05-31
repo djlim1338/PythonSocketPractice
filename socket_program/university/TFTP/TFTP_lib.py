@@ -10,7 +10,6 @@ import socket
 import os
 import sys
 import time
-import validators
 
 
 BUFF_SIZE = 2048
@@ -210,7 +209,7 @@ def get_file(socket_obj, address, opcode, file_name):  # client
     write_file = open(TFTP_CLIENT_ROOT_DIR + file_name, 'w', encoding='utf-8')  # 파일 쓰기로 open
     last_block_number = 1  # 블럭 번호 저장
     timeout_counter = 0
-    print(WS)
+    #print(WS)
     while True:
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
@@ -236,16 +235,17 @@ def get_file(socket_obj, address, opcode, file_name):  # client
             if data_split_list['data']:
                 write_file.write(data_split_list['data'])
             if data_split_list['last']:  # 마지막 블럭인 경우 루프 중단
+                finish_str = f"get file done."
                 break
         elif data_split_list['opcode'] == MESSAGE_OP_CODE['ERROR']:  # 에러코드 발생시 알린 후 종료
-            error_str = f"ERROR!! code({data_split_list['opcode']})  {data_split_list['data']}"
-            print(error_str)
-            write_file.write('\n\n' + error_str)
-            print(WS)
+            finish_str = f"ERROR!! code({data_split_list['opcode']})  {data_split_list['data']}"
+            #print(error_str)
+            #write_file.write('\n\n' + error_str)
+            #print(WS)
             break
     write_file.close()
-    print(f"get file done.")
-    print(WS)
+    print(finish_str)
+    #print(WS)
 
 
 def wrq_server(socket_obj, address, file_name):  # server WRQ(PUT)
@@ -300,7 +300,7 @@ def put_file(socket_obj, address, opcode, file_name):  # client
     data_one_block = ""
     last_ack_state = False
     timeout_counter = 0
-    print(WS)
+    #print(WS)
     while True:
         try:
             data, recv_address = socket_obj.recvfrom(BUFF_SIZE)  # 수신 (대기)
@@ -309,16 +309,17 @@ def put_file(socket_obj, address, opcode, file_name):  # client
             timeout_counter += 1
             if timeout_counter > SOCKET_TIME_OUT_MAX:
                 raise
-            print("timeout resend")
+            #print("timeout resend")
             continue
         data_split_list = data_check(data)  # 데이터 분류
         if last_ack_state:
+            finish_str = f"put file done."
             break
 
         if data_split_list['opcode'] == MESSAGE_OP_CODE['ERROR']:  # 에러코드 발생시 알린 후 종료
-            error_str = f"ERROR!! code({data_split_list['opcode']})  {data_split_list['data']}"
-            print(error_str)
-            print(WS)
+            finish_str = f"ERROR!! code({data_split_list['opcode']})  {data_split_list['data']}"
+            #print(error_str)
+            #print(WS)
             return
         elif (data_split_list['opcode'] == MESSAGE_OP_CODE['ACK']) and (
                 data_split_list['number'] == last_block_number):  # 블럭번호 확인 후 데이터 송신
@@ -333,5 +334,5 @@ def put_file(socket_obj, address, opcode, file_name):  # client
                 last_ack_state = True
 
     read_file_pointer.close()
-    print(f"put file done.")
-    print(WS)
+    print(finish_str)
+    #print(WS)

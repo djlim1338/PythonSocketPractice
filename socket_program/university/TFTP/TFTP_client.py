@@ -6,6 +6,7 @@ djlim
 """
 
 from TFTP_lib import *
+import validators
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # 소켓 생성
 sock.settimeout(SOCKET_TIME_OUT)  # 타임아웃 설정
