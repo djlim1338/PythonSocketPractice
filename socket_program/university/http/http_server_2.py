@@ -56,21 +56,25 @@ def doHTTPService(sock) :
     if os.path.isfile(reqURL):
         open_file = open(reqURL, "r", encoding="utf-8")
         statusLine = 'HTTP/1.1 200 OK\r\n'
+        content_length = os.path.getsize(reqURL)
     else:
         open_file = None
         statusLine = 'HTTP/1.1 404 Not Found\r\n'
+        open_file = open("./notFound.html", "r", encoding="utf-8")
+        content_length = os.path.getsize("./notFound.html")
 
     headerLine1 = 'Server: vshttpd 0.1\r\n'
-    headerLine2 = 'Connection: close\r\n\r\n'
+    headerLine2 = 'Connection: close\r\n'
+    headerLine3 = f'Content-Length: {content_length}\r\n\r\n'
+    print(content_length)
     sock.sendall(statusLine.encode())
-    #print(statusLine)
     sock.sendall(headerLine1.encode())
-    #print(headerLine1)
     sock.sendall(headerLine2.encode())
-    #print(headerLine2)
+    sock.sendall(headerLine3.encode())
 
     if open_file:
         responseBody = open_file.read()
+        print(len(responseBody))
         sock.sendall(responseBody.encode())
         #print(responseBody)
     print("send done")
@@ -79,7 +83,7 @@ def doHTTPService(sock) :
 
 #HOST_IP = '203.250.133.88'
 HOST_IP = ''
-PORT = 50905
+PORT = 50000
 #PORT = int(sys.argv[1])
 BACKLOG = 5
 RECV_BUFF = 10000
