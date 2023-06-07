@@ -16,8 +16,8 @@ BUFF_SIZE = 2048
 DATA_MAX_SIZE = 512
 MODE = 'netascii'  # netascii(=text)
 TFTP_MESSAGE_SPACE = 0x00  # 구분 공백
-SOCKET_TIME_OUT = 5
-SOCKET_TIME_OUT_MAX = 3
+SOCKET_TIME_OUT = 10
+SOCKET_TIME_OUT_MAX = 2
 TFTP_ROOT_DIR = './TFTP_ROOT/'  # server TFTP data root dir
 TFTP_CLIENT_ROOT_DIR = './TFTP_CLIENT_ROOT/'  # client TFTP data root dir
 WS = "-----------------------------------------------------------------------------------------------------------------------------"  # print출력시 벽
