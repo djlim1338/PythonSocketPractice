@@ -52,7 +52,7 @@ if __name__ == "__main__":
             print(f"{input_command} file :{input_file_name} start...")
             get_file(sock, input_address, COMMAND_OPCODE[input_command], input_file_name)
         elif input_command == 'PUT':
-            if not os.path.isfile(input_file_name):
+            if not os.path.isfile(TFTP_CLIENT_ROOT_DIR + input_file_name):
                 print(f"[{input_file_name}] That file doesn't exist.")
                 exit(0)
             print(f"{input_command} file :{input_file_name} start...")
