@@ -142,7 +142,7 @@ def make_error_message(error_number, error_message):  # make ERROR message
     pack_str = f"!2H{len(error_message)}sB"
     return struct.pack(pack_str, MESSAGE_OP_CODE['ERROR'], error_number, error_message.encode(), TFTP_MESSAGE_SPACE)
 
-
+"""
 def send_rq(socket_obj, address, opcode, file_name):  # RRQ/WRQ send
     send_msg = make_rq_message(opcode, file_name, MODE)  # RQ 바이트열 생성
     socket_obj.sendto(send_msg, address)  # RQ 송신
@@ -166,6 +166,7 @@ def pop_data_split(put_data):  # 보낼 데이서 512바이트씩 분리하여 �
     else:
         put_data = ""
     return data_piece, put_data
+"""
 
 
 def rrq_server(socket_obj, address, file_name):  # server RRQ(GET)=
